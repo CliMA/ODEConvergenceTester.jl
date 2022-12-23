@@ -50,22 +50,17 @@ all_algos = [Euler(), SSPRK22()]
     tc = ODEConvergenceTester.refinement_study
     for alg in all_algos
         for (i, prob) in enumerate(all_problems)
-            integrator = OrdinaryDiffEq.init(prob, alg; dt = Float64(0.1))
-            ctr = tc(integrator; refinement_range = 9:13, print_report = false)
-            @test last(ctr.p) ≈ OrdinaryDiffEq.alg_order(alg) rtol = 5e-2
+            expected_order = OrdinaryDiffEq.alg_order(alg)
+            ctr = tc(prob, alg; refinement_range = 9:13, verbose = false, expected_order)
+            @test last(ctr.computed_order) ≈ expected_order rtol = 5e-2
         end
     end
 
     # Make sure printing doesn't break:
-    integrator = OrdinaryDiffEq.init(
-        first(all_problems),
-        first(all_algos);
-        dt = Float64(0.1)
-    )
-    ctr = tc(integrator; refinement_range = 9:13)
+    ctr = tc(first(all_problems), first(all_algos); refinement_range = 9:13)
 
     a_err = "Need at least 3 runs to compute convergence order"
-    @test_throws AssertionError(a_err) tc(integrator; refinement_range = 1:2)
+    @test_throws AssertionError(a_err) tc(first(all_problems), first(all_algos); refinement_range = 1:2)
 
 end
 
