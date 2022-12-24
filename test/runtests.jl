@@ -56,6 +56,13 @@ all_algos = [Euler(), SSPRK22()]
         end
     end
 
+    # test verbose option
+    alg = first(all_algos)
+    prob = first(all_problems)
+    expected_order = OrdinaryDiffEq.alg_order(alg)
+    ctr = tc(prob, alg; refinement_range = 9:13, verbose = true, expected_order)
+    @test last(ctr.computed_order) ≈ expected_order rtol = 5e-2
+
     # Make sure printing doesn't break:
     ctr = tc(first(all_problems), first(all_algos); refinement_range = 9:13)
 
