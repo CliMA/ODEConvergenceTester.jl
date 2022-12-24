@@ -1,6 +1,5 @@
 module ODEConvergenceTester
 
-import ClimaTimeSteppers
 import LinearAlgebra
 import Logging
 import OrdinaryDiffEq
