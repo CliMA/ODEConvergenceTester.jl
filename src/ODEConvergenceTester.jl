@@ -7,22 +7,24 @@ import OrdinaryDiffEq
 compute_err_norm_default(u::FT, v::FT) where {FT <: Real} = LinearAlgebra.norm(u - v)
 compute_err_norm_default(u, v) = LinearAlgebra.norm(u .- v)
 
-Base.@kwdef struct ConvergenceTestResults{FT}
-    p::Vector{FT}
+Base.@kwdef struct ConvergenceTestResults{FT,T}
+    computed_order::Vector{FT}
     err::Vector{FT}
     dts::Vector{FT}
-    p_expected::FT
+    expected_order::T
 end
 
 """
     refinement_study(
-        integrator₀,
+        problem,
+        alg,
         dts::Vector{<:Real};
         compute_err_norm::Function = compute_err_norm_default,
     )
 
     refinement_study(
-        integrator₀;
+        problem,
+        alg;
         compute_err_norm::Function = compute_err_norm_default,
         refinement_range::UnitRange = 1:3,
     )
@@ -30,7 +32,8 @@ end
 Estimates and reports the convergence rates.
 
 ## Arguments
- - `integrator₀` a OrdinaryDiffEq integrator
+ - `problem` a OrdinaryDiffEq problem
+ - `alg` an algorithm
  - `dts` a vector of timesteps
  - `compute_err_norm = (x,y) -> norm(x,y)` a function for computing
     the norm of the solution
@@ -73,10 +76,13 @@ Where
     http://www.grc.nasa.gov/WWW/wind/valid/tutorial/spatconv.html
 """
 function refinement_study(
-        integrator₀,
+        problem,
+        alg,
         dts::Vector{dtType};
+        expected_order = OrdinaryDiffEq.alg_order(alg),
         compute_err_norm::Function = compute_err_norm_default,
-        print_report::Bool = true,
+        verbose::Bool = false,
+        integrator_kwargs...
     ) where {dtType <: Real}
 
     n_refinements = length(dts)
@@ -86,7 +92,7 @@ function refinement_study(
 
     # Create deepcopy of integrators to prevent accidental mutation
     integrators = map(1:n_refinements) do n
-        deepcopy(integrator₀)
+        OrdinaryDiffEq.init(deepcopy(problem), deepcopy(alg); dt=dts[n], integrator_kwargs...)
     end
 
     # Refinement factors
@@ -95,15 +101,16 @@ function refinement_study(
     end
 
     # Compute new t_final such that n_steps[i]*dt[i] = t_final
-    t_final₀ = last(integrator₀.sol.prob.tspan)
+    t_final₀ = last(problem.tspan)
     n_steps₀ = round(t_final₀ / dts[1])
     n_steps = map(i -> n_steps₀ * 2^(i - 1), 1:n_refinements)
     t_final = map(enumerate(dts)) do (i, dt)
         n_steps[i] * dt
     end
 
-    if print_report
+    if verbose
         @info "------ Convergence parameters ------"
+        @info "tspan (original)          : $(problem.tspan)"
         @info "nsteps                    : $n_steps"
         @info "refinement factors        : $refinement_factor"
         @info "dts                       : $dts"
@@ -113,11 +120,18 @@ function refinement_study(
 
     for i in 1:n_refinements
         dt = dts[i]
-        OrdinaryDiffEq.set_proposed_dt!(integrators[i], dt)
-        print("@timing iteration $i:")
-        @time Logging.with_logger(Logging.NullLogger()) do
-            for n in 1:n_steps[i]
-                OrdinaryDiffEq.step!(integrators[i], dt)
+        if verbose
+            print("@timing iteration $i:")
+            @time Logging.with_logger(Logging.NullLogger()) do
+                for n in 1:n_steps[i]
+                    OrdinaryDiffEq.step!(integrators[i], dt)
+                end
+            end
+        else
+            Logging.with_logger(Logging.NullLogger()) do
+                for n in 1:n_steps[i]
+                    OrdinaryDiffEq.step!(integrators[i], dt)
+                end
             end
         end
         u = integrators[i].u
@@ -132,24 +146,26 @@ function refinement_study(
     end
 
     FT = eltype(p)
-    p_expected = FT(OrdinaryDiffEq.alg_order(integrator₀.sol.alg))
-    if print_report
+    if verbose
         @info "----- Convergence study output -----"
         @info "Errors                    : $(err)"
         @info "Convergence orders        : $(p)"
-        @info "Expected convergence order: $(p_expected)"
+        @info "Expected convergence order: $(expected_order)"
         @info "------------------------------------"
     end
-    return ConvergenceTestResults(; p, err, dts, p_expected)
+    return ConvergenceTestResults(; computed_order=p, err, dts, expected_order)
 end
 
 function refinement_study(
-        integrator₀;
+        problem,
+        alg;
+        expected_order = OrdinaryDiffEq.alg_order(alg),
         refinement_range::UnitRange = 1:3,
         compute_err_norm::Function = compute_err_norm_default,
-        print_report::Bool = true,
+        verbose::Bool = false,
+        integrator_kwargs...,
     )
-    t_final₀ = last(integrator₀.sol.prob.tspan)
+    t_final₀ = last(problem.tspan)
     # For this analysis, Δt must be ~ 2^n, so we must
     # find a scale that will result in a reasonable timestep:
     # 2^(scale) = t_final
@@ -163,10 +179,13 @@ function refinement_study(
         dt_max / (refinement_factor^(i - 1))
     end
     return refinement_study(
-        integrator₀,
+        problem,
+        alg,
         dts;
-        print_report=print_report,
-        compute_err_norm=compute_err_norm,
+        expected_order,
+        verbose,
+        compute_err_norm,
+        integrator_kwargs...,
     )
 end
 
