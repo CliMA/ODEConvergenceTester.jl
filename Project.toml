@@ -1,7 +1,7 @@
 name = "ODEConvergenceTester"
 uuid = "42a5c2e1-f365-4540-8ca5-3684de3ecd95"
 authors = ["CliMA Contributors <clima-software@caltech.edu>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -9,5 +9,5 @@ Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 
 [compat]
-OrdinaryDiffEq = "5.64, 6.6"
+OrdinaryDiffEq = "5, 6"
 julia = "1.4"
