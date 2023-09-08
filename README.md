@@ -1,6 +1,6 @@
 # ODEConvergenceTester.jl
 
-A simple package for testing convergence rates for [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl)'s problems, see the [integrator interface](https://diffeq.sciml.ai/stable/basics/integrator/#integrator) for the input arguments to `OrdinaryDiffEq.init`.
+A simple package for testing convergence rates for [SciMLBase.jl](https://github.com/SciML/SciMLBase.jl)'s problems, see the [integrator interface](https://diffeq.sciml.ai/stable/basics/integrator/#integrator) for the input arguments to `SciMLBase.init`.
 
 |||
 |---------------------:|:----------------------------------------------|
@@ -20,9 +20,9 @@ A simple package for testing convergence rates for [OrdinaryDiffEq.jl](https://g
 ## Example
 
 ```julia
-import OrdinaryDiffEq
+import SciMLBase
 # Below, `prob` `alg` and `kwargs` are the same as those passed to:
-# integrator = OrdinaryDiffEq.init(prob, alg; kwargs...)
+# integrator = SciMLBase.init(prob, alg; kwargs...)
 
 import ODEConvergenceTester
 ODEConvergenceTester.refinement_study(

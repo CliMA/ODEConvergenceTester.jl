@@ -1,10 +1,11 @@
 using Test
 import ODEConvergenceTester
+import OrdinaryDiffEq as ODE
 
 # These problem configurations were borrowed, and slightly modified, from
 # https://github.com/SciML/OrdinaryDiffEq.jl/blob/master/test/algconvergence/ode_ssprk_tests.jl
 
-using OrdinaryDiffEq, DiffEqDevTools, Test, Random
+using SciMLBase, DiffEqDevTools, Test, Random
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear
 
@@ -44,13 +45,15 @@ all_problems = [
     test_problem_ssp,
 ]
 
-all_algos = [Euler(), SSPRK22()]
+all_algos = [ODE.Euler(), ODE.SSPRK22()]
+SciMLBase.alg_order(::ODE.Euler) = 1
+SciMLBase.alg_order(::ODE.SSPRK22) = 2
 
 @testset "ODEConvergenceTester" begin
     tc = ODEConvergenceTester.refinement_study
     for alg in all_algos
         for (i, prob) in enumerate(all_problems)
-            expected_order = OrdinaryDiffEq.alg_order(alg)
+            expected_order = SciMLBase.alg_order(alg)
             ctr = tc(prob, alg; refinement_range = 9:13, verbose = false, expected_order)
             @test last(ctr.computed_order) ≈ expected_order rtol = 5e-2
         end
@@ -59,7 +62,7 @@ all_algos = [Euler(), SSPRK22()]
     # test verbose option
     alg = first(all_algos)
     prob = first(all_problems)
-    expected_order = OrdinaryDiffEq.alg_order(alg)
+    expected_order = SciMLBase.alg_order(alg)
     ctr = tc(prob, alg; refinement_range = 9:13, verbose = true, expected_order)
     @test last(ctr.computed_order) ≈ expected_order rtol = 5e-2
 
