@@ -2,7 +2,7 @@ module ODEConvergenceTester
 
 import LinearAlgebra
 import Logging
-import OrdinaryDiffEq
+import SciMLBase
 
 compute_err_norm_default(u::FT, v::FT) where {FT <: Real} = LinearAlgebra.norm(u - v)
 compute_err_norm_default(u, v) = LinearAlgebra.norm(u .- v)
@@ -32,7 +32,7 @@ end
 Estimates and reports the convergence rates.
 
 ## Arguments
- - `problem` a OrdinaryDiffEq problem
+ - `problem` a SciMLBase problem
  - `alg` an algorithm
  - `dts` a vector of timesteps
  - `compute_err_norm = (x,y) -> norm(x,y)` a function for computing
@@ -79,7 +79,7 @@ function refinement_study(
         problem,
         alg,
         dts::Vector{dtType};
-        expected_order = OrdinaryDiffEq.alg_order(alg),
+        expected_order = SciMLBase.alg_order(alg),
         compute_err_norm::Function = compute_err_norm_default,
         verbose::Bool = false,
         integrator_kwargs...
@@ -92,7 +92,7 @@ function refinement_study(
 
     # Create deepcopy of integrators to prevent accidental mutation
     integrators = map(1:n_refinements) do n
-        OrdinaryDiffEq.init(deepcopy(problem), deepcopy(alg); dt=dts[n], integrator_kwargs...)
+        SciMLBase.init(deepcopy(problem), deepcopy(alg); dt=dts[n], integrator_kwargs...)
     end
 
     # Refinement factors
@@ -124,13 +124,13 @@ function refinement_study(
             print("@timing iteration $i:")
             @time Logging.with_logger(Logging.NullLogger()) do
                 for n in 1:n_steps[i]
-                    OrdinaryDiffEq.step!(integrators[i], dt)
+                    SciMLBase.step!(integrators[i], dt)
                 end
             end
         else
             Logging.with_logger(Logging.NullLogger()) do
                 for n in 1:n_steps[i]
-                    OrdinaryDiffEq.step!(integrators[i], dt)
+                    SciMLBase.step!(integrators[i], dt)
                 end
             end
         end
@@ -159,7 +159,7 @@ end
 function refinement_study(
         problem,
         alg;
-        expected_order = OrdinaryDiffEq.alg_order(alg),
+        expected_order = SciMLBase.alg_order(alg),
         refinement_range::UnitRange = 1:3,
         compute_err_norm::Function = compute_err_norm_default,
         verbose::Bool = false,
